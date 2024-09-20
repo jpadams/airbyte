@@ -59,13 +59,13 @@ class CraneClient:
 
     async def digest(self, repository_and_tag: str) -> str:
         console.log(f"Fetching digest for {repository_and_tag}...")
-        return (await self.authenticated_container.with_exec(["digest", repository_and_tag]).stdout()).strip()
+        return (await self.authenticated_container.with_exec(["crane", "digest", repository_and_tag]).stdout()).strip()
 
     async def ls(self, registry_name: str, repository_name: str) -> List[str]:
         repository_address = f"{registry_name}/{repository_name}"
         console.log(f"Fetching published images in {repository_address}...")
         try:
-            crane_ls_output = await self.authenticated_container.with_exec(["ls", repository_address]).stdout()
+            crane_ls_output = await self.authenticated_container.with_exec(["crane", "ls", repository_address]).stdout()
             return crane_ls_output.splitlines()
         except dagger.ExecError as exec_error:
             # When the repository does not exist, crane ls returns an error with NAME_UNKNOWN in the stderr.
