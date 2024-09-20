@@ -58,7 +58,7 @@ class Proxy:
         proxy_container = (
             self.dagger_client.container()
             .from_(self.MITMPROXY_IMAGE)
-            .with_exec(["mkdir", "-p", "/home/mitmproxy/.mitmproxy"], skip_entrypoint=True)
+            .with_exec(["mkdir", "-p", "/home/mitmproxy/.mitmproxy"])
             # This is caching the mitmproxy stream files, which can contain sensitive information
             # We want to nuke this cache after test suite execution.
             .with_mounted_cache("/dumps", self.dump_cache_volume)
@@ -97,7 +97,7 @@ class Proxy:
                 f"/dumps/{self.MITM_STREAM_FILE}",
             ]
 
-        return proxy_container.with_exec(command)
+        return proxy_container.with_exec(command, use_entrypoint=True)
 
     async def get_service(self) -> dagger.Service:
         return (await self.get_container()).with_exposed_port(self.PROXY_PORT).as_service()
@@ -114,7 +114,7 @@ class Proxy:
         cert_path_in_volume = "/mitmproxy_dir/mitmproxy-ca.pem"
         ca_certificate_path = "/usr/local/share/ca-certificates/mitmproxy.crt"
 
-        python_version_output = (await container.with_exec(["python", "--version"], skip_entrypoint=True).stdout()).strip()
+        python_version_output = (await container.with_exec(["python", "--version"]).stdout()).strip()
         python_version = python_version_output.split(" ")[-1]
         python_version_minor_only = ".".join(python_version.split(".")[:-1])
         requests_cert_path = f"/usr/local/lib/python{python_version_minor_only}/site-packages/certifi/cacert.pem"
@@ -124,15 +124,13 @@ class Proxy:
                 .with_mounted_cache("/mitmproxy_dir", self.mitmproxy_dir_cache)
                 .with_exec(
                     ["cp", cert_path_in_volume, requests_cert_path],
-                    skip_entrypoint=True,
                 )
                 .with_exec(
                     ["cp", cert_path_in_volume, ca_certificate_path],
-                    skip_entrypoint=True,
                 )
                 # The following command make the container use the proxy for all outgoing HTTP requests
                 .with_env_variable("REQUESTS_CA_BUNDLE", requests_cert_path)
-                .with_exec(["update-ca-certificates"], skip_entrypoint=True)
+                .with_exec(["update-ca-certificates"])
                 .with_env_variable("http_proxy", f"{self.hostname}:{self.PROXY_PORT}")
                 .with_env_variable("https_proxy", f"{self.hostname}:{self.PROXY_PORT}")
             )
@@ -157,7 +155,7 @@ class Proxy:
             .with_env_variable("CACHEBUSTER", str(uuid.uuid4()))
             .with_mounted_cache("/dumps", self.dump_cache_volume)
         )
-        dump_files = (await container.with_exec(["ls", "/dumps"], skip_entrypoint=True).stdout()).splitlines()
+        dump_files = (await container.with_exec(["ls", "/dumps"]).stdout()).splitlines()
         if self.MITM_STREAM_FILE not in dump_files:
             return None
         return await (

@@ -152,7 +152,6 @@ class ConnectorRunner:
                     " ".join(airbyte_command)
                     + f"| {self.IN_CONTAINER_OBFUSCATOR_PATH} > {self.IN_CONTAINER_OUTPUT_PATH} 2>&1 | tee -a {self.IN_CONTAINER_OUTPUT_PATH}",
                 ],
-                skip_entrypoint=True,
             )
             executed_container = await container.sync()
             # We exporting to disk as we can't read .stdout() or await file.contents() as it might blow up the memory
