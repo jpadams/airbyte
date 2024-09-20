@@ -265,7 +265,7 @@ class ConnectorRunner:
         return self.parse_airbyte_messages_from_command_output(output)
 
     async def _read_output_from_stdout(self, airbyte_command: list, container: dagger.Container) -> str:
-        return await container.with_exec(airbyte_command).stdout()
+        return await container.with_exec(airbyte_command, use_entrypoint=True).stdout()
 
     async def _read_output_from_file(self, airbyte_command: list, container: dagger.Container) -> str:
         local_output_file_path = f"/tmp/{str(uuid.uuid4())}"
@@ -273,7 +273,6 @@ class ConnectorRunner:
         airbyte_command = entrypoint + airbyte_command
         container = container.with_exec(
             ["sh", "-c", " ".join(airbyte_command) + f" > {self.IN_CONTAINER_OUTPUT_PATH} 2>&1 | tee -a {self.IN_CONTAINER_OUTPUT_PATH}"],
-            skip_entrypoint=True,
         )
         await container.file(self.IN_CONTAINER_OUTPUT_PATH).export(local_output_file_path)
         output = await AnyioPath(local_output_file_path).read_text()
